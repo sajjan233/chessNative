@@ -37,9 +37,12 @@ export default function D3ChessBoard({ userId, roomId }) {
 
     socket.emit('roomwiseboard', { roomId, userId });
 
-    socket.on('board', ({ board, nextPlay }) => {
-      setBoard(board);
-      setNextPlay(nextPlay);
+    socket.on('board', (data) => {
+      console.log("data........ ...",data);
+      
+
+      setBoard(data?.board);
+      setNextPlay(data?.nextPlay);
     });
 
     socket.on('gameStarted', () => {

@@ -1,115 +1,94 @@
-// components/AnimatedChessBoard.jsx
+// SocketChessBoard.jsx
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
-import Svg, { Rect, Text as SvgText } from 'react-native-svg';
-import socket from '../services/socket';
+import { Dimensions } from 'react-native';
+import Svg, { Rect, Text as SvgText, Circle } from 'react-native-svg';
+import Animated, { useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import io from 'socket.io-client';
 
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
-
-import {
-  GestureDetector,
-  Gesture,
-} from 'react-native-gesture-handler';
-
-const screenWidth = Dimensions.get('window').width;
-const boardSize = screenWidth;
+const { width } = Dimensions.get('window');
+const boardSize = width - 40;
 const cellSize = boardSize / 8;
 
-export default function AnimatedChessBoard({ userId, roomId }) {
-  const [board, setBoard] = useState([]);
+// change to your backend socket URL
+const SOCKET_URL = 'http://192.168.1.10:3000';
 
-  // 👇 Rotation values (drag angle)
+export default function SocketChessBoard() {
+  const [board, setBoard] = useState(Array(8).fill(Array(8).fill(null)));
+
   const rotateX = useSharedValue(0);
   const rotateY = useSharedValue(0);
 
-  // 👇 Gesture to detect drag
-  const panGesture = Gesture.Pan()
-    .onUpdate((e) => {
-      rotateY.value = withSpring(rotateY.value + e.changeX / 2);
-      rotateX.value = withSpring(rotateX.value - e.changeY / 2);
+  // Socket connect
+  useEffect(() => {
+    const socket = io(SOCKET_URL);
+
+    socket.on('connect', () => {
+      console.log('✅ Connected to socket server');
     });
 
-  // 👇 Apply transform using animated style
+    socket.on('boardState', (data) => {
+      // data will be a 2D array representing board
+      setBoard(data);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  // Gesture for rotation
+  const panGesture = Gesture.Pan().onUpdate((e) => {
+    rotateY.value = e.translationX / 5;
+    rotateX.value = -e.translationY / 5;
+  });
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
-        { perspective: 1000 }, // 👈 for 3D effect
+        { perspective: 800 },
         { rotateX: `${rotateX.value}deg` },
         { rotateY: `${rotateY.value}deg` },
       ],
     };
   });
 
-  useEffect(() => {
-    if (!userId || !roomId) return;
-    socket.emit('roomwiseboard', { roomId, userId });
-
-    socket.on('board', ({ board }) => {
-      setBoard(board);
-    });
-
-    return () => {
-      socket.off('board');
-    };
-  }, [userId, roomId]);
-
   return (
-    <View style={styles.container}>
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.boardWrapper, animatedStyle]}>
-          <Svg width={boardSize} height={boardSize}>
-            {board.map((row, rowIndex) =>
-              row.map((cell, colIndex) => {
-                const position = Object.keys(cell)[0];
-                const piece = cell[position];
-                const isWhite = (rowIndex + colIndex) % 2 === 0;
-
-                return (
-                  <React.Fragment key={`${rowIndex}-${colIndex}`}>
-                    <Rect
-                      x={colIndex * cellSize}
-                      y={rowIndex * cellSize}
-                      width={cellSize}
-                      height={cellSize}
-                      fill={isWhite ? '#EEE' : '#444'}
-                    />
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[{ alignSelf: 'center', marginTop: 50 }, animatedStyle]}>
+        <Svg width={boardSize} height={boardSize}>
+          {board.map((row, rowIndex) =>
+            row.map((cell, colIndex) => {
+              const isWhite = (rowIndex + colIndex) % 2 === 0;
+              return (
+                <React.Fragment key={`${rowIndex}-${colIndex}`}>
+                  {/* Board cell */}
+                  <Rect
+                    x={colIndex * cellSize}
+                    y={rowIndex * cellSize}
+                    width={cellSize}
+                    height={cellSize}
+                    fill={isWhite ? '#f0d9b5' : '#b58863'}
+                  />
+                  {/* If piece present */}
+                  {cell && (
                     <SvgText
                       x={colIndex * cellSize + cellSize / 2}
-                      y={rowIndex * cellSize + cellSize / 1.7}
-                      fontSize={cellSize / 2.5}
-                      fill="black"
+                      y={rowIndex * cellSize + cellSize / 1.5}
+                      fontSize={24}
+                      fontWeight="bold"
+                      fill={isWhite ? '#000' : '#fff'}
                       textAnchor="middle"
                     >
-                      {piece}
+                      {cell}
                     </SvgText>
-                  </React.Fragment>
-                );
-              })
-            )}
-          </Svg>
-        </Animated.View>
-      </GestureDetector>
-    </View>
+                  )}
+                </React.Fragment>
+              );
+            })
+          )}
+        </Svg>
+      </Animated.View>
+    </GestureDetector>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#222',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  boardWrapper: {
-    width: boardSize,
-    height: boardSize,
-    borderWidth: 1,
-    borderColor: '#999',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-});

@@ -125,7 +125,7 @@ export default function GameScreen() {
       } catch (error) {
         console.error('🚨 Error during socket connection:', error);
       }
-    };
+    };``
 
     connectAndJoinRoom();
 
@@ -145,7 +145,7 @@ export default function GameScreen() {
 
       {userId && roomId ? (
         // ✅ Use the D3 version of the chessboard here
-        <AnimatedChessBoard userId={userId} roomId={roomId} />
+        <D3ChessBoard userId={userId} roomId={roomId} />
       ) : (
         <Text>⏳ Waiting for game to initialize...</Text>
       )}
