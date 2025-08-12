@@ -1,123 +1,123 @@
+// components/ChessBoard.jsx
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Button } from 'react-native';
-import Svg, { Rect, Text as SvgText } from 'react-native-svg';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import socket from '../services/socket';
 
 const screenWidth = Dimensions.get('window').width;
-const boardSize = screenWidth;
-const cellSize = boardSize / 8;
+const cellSize = screenWidth / 8;
 
-export default function D3ChessBoard({ userId, roomId }) {
-  const [board, setBoard] = useState([]);
-  const [selected, setSelected] = useState(null);
+export default function ChessBoard({ userId, roomId }) {
+  const [board, setBoard] = useState([]); // 2D board array
+  const [loading, setLoading] = useState(true);
   const [from, setFrom] = useState(null);
-  const [nextPlay, setNextPlay] = useState(null);
-  const [message, setMessage] = useState('');
-  const [isFlipped, setIsFlipped] = useState(false); // 🔁 NEW: flip board state
+  const [to, setTo] = useState(null);
 
-  const handleCellPress = (pos) => {
-    if (!from) {
-      setFrom(pos);
-      setSelected(pos);
-    } else {
-      const to = pos;
-      socket.emit('chess_pieces_position', {
-        roomId,
-        userId,
-        from,
-        to,
-      });
-      setFrom(null);
-      setSelected(null);
-    }
-  };
-
+  // Socket events
   useEffect(() => {
-    if (!userId || !roomId) return;
+    console.log("🔌 Connecting to chess board...");
 
-    socket.emit('roomwiseboard', { roomId, userId });
-
-    socket.on('board', (data) => {
-      console.log("data........ ...",data);
-      
-
-      setBoard(data?.board);
-      setNextPlay(data?.nextPlay);
+    // Listen for updated board from server
+    socket.on('board', ({ board: newBoard }) => {
+      console.log("♟️ Board received from server:", newBoard);
+      setBoard(newBoard);
+      setLoading(false);
     });
 
-    socket.on('gameStarted', () => {
-      setMessage("Game started!");
+    // Listen for server updates after a move
+    socket.on('chess_pieces_position', (updatedBoard) => {
+      console.log("♟️ Updated board after move:", updatedBoard);
+      setBoard(updatedBoard);
     });
+
+    // Initial join
+    socket.emit('joinRoom', { userId, roomId });
+
+    // Request initial board
+    socket.emit('getBoard', { roomId });
 
     return () => {
       socket.off('board');
-      socket.off('gameStarted');
+      socket.off('chess_pieces_position');
     };
   }, [userId, roomId]);
 
-  // 🔁 Flip board rows and columns when isFlipped is true
-  const displayedBoard = isFlipped
-    ? [...board].reverse().map(row => [...row].reverse())
-    : board;
+  const handleCellPress = (row, col) => {
+    const pos = `${String.fromCharCode(97 + col)}${8 - row}`; // e.g., a8, h1
+    if (!from) {
+      setFrom(pos);
+    } else if (!to) {
+      setTo(pos);
+
+      // Emit move when both from and to are selected
+      const moveData = { from: from, to: pos, roomId };
+      console.log("📤 Sending move:", moveData);
+      socket.emit('chess_pieces_position', moveData);
+
+      // Reset for next move
+      setFrom(null);
+      setTo(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#000" />
+        <Text>Loading chessboard...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.message}>{message}</Text>
-      <Text style={styles.message}>Next Play: {nextPlay}</Text>
-
-      {/* 🔁 Flip button */}
-      <View style={{ marginBottom: 10 }}>
-        <Button title="🔁 Flip Board" onPress={() => setIsFlipped(!isFlipped)} />
-      </View>
-
-      <Svg height={boardSize} width={boardSize}>
-        {displayedBoard.map((row, rowIndex) =>
-          row.map((cell, colIndex) => {
-            const position = Object.keys(cell)[0];
-            const piece = cell[position];
-            const isWhite = (rowIndex + colIndex) % 2 === 0;
-            const isSelected = selected === position;
-
+      {board.map((rowArray, rowIndex) => (
+        <View key={rowIndex} style={styles.row}>
+          {rowArray.map((cell, colIndex) => {
+            const isDark = (rowIndex + colIndex) % 2 === 1;
+            const pos = `${String.fromCharCode(97 + colIndex)}${8 - rowIndex}`;
+            const isSelected = pos === from || pos === to;
             return (
-              <React.Fragment key={`${rowIndex}-${colIndex}`}>
-                <Rect
-                  x={colIndex * cellSize}
-                  y={rowIndex * cellSize}
-                  width={cellSize}
-                  height={cellSize}
-                  fill={isWhite ? '#EEE' : '#444'}
-                  stroke={isSelected ? 'red' : 'none'}
-                  strokeWidth={2}
-                  onPress={() => handleCellPress(position)}
-                />
-                <SvgText
-                  x={colIndex * cellSize + cellSize / 2}
-                  y={rowIndex * cellSize + cellSize / 1.7}
-                  fontSize={cellSize / 2.5}
-                  fill="black"
-                  textAnchor="middle"
-                >
-                  {piece}
-                </SvgText>
-              </React.Fragment>
+              <TouchableOpacity
+                key={colIndex}
+                style={[
+                  styles.cell,
+                  { backgroundColor: isDark ? '#769656' : '#eeeed2' },
+                  isSelected && { backgroundColor: '#f6f669' },
+                ]}
+                onPress={() => handleCellPress(rowIndex, colIndex)}
+              >
+                <Text style={styles.piece}>{cell || ''}</Text>
+              </TouchableOpacity>
             );
-          })
-        )}
-      </Svg>
+          })}
+        </View>
+      ))}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 40,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    flex: 1,
+    width: screenWidth,
+    aspectRatio: 1,
+    borderWidth: 2,
+    borderColor: '#000',
   },
-  message: {
-    fontSize: 18,
-    marginBottom: 10,
-    fontWeight: 'bold',
+  row: {
+    flexDirection: 'row',
+  },
+  cell: {
+    width: cellSize,
+    height: cellSize,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  piece: {
+    fontSize: 24,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
