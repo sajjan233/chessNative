@@ -6,11 +6,11 @@ import 'react-native-url-polyfill/auto';
 
 // Import socket.io-client
 import { io } from 'socket.io-client';
+import { BaseURL } from '../comman';
 console.log("socccckeeeeeeet");
-//http://3.108.254.144:5000/
-//http://localhost:5000/
+
 // Create and configure socket instance
-const socket = io('http://localhost:5000/', {
+const socket = io(BaseURL(), {
   transports: ['websocket'],  // Force websocket transport
   autoConnect: false,         // Connect manually when needed
 });

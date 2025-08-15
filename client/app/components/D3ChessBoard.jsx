@@ -1,110 +1,136 @@
-// components/ChessBoard.jsx
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+// components/D3ChessBoard.jsx
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import socket from '../services/socket';
 
 const screenWidth = Dimensions.get('window').width;
 const cellSize = screenWidth / 8;
+const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
-export default function ChessBoard({ userId, roomId }) {
-  const [board, setBoard] = useState([]); // 2D board array
-  const [loading, setLoading] = useState(true);
-  const [from, setFrom] = useState(null);
-  const [to, setTo] = useState(null);
+// Convert chess notation like "f6" to row/col indexes
+const coordToIndex = (coord) => {
+  const file = coord[0];
+  const rank = coord[1];
+  const col = file.charCodeAt(0) - 'a'.charCodeAt(0);
+  const row = 8 - parseInt(rank, 10);
+  return { row, col };
+};
 
-  // Socket events
+// Convert row/col to chess notation like e2
+const indexToCoord = (row, col) => {
+  return files[col] + (8 - row);
+};
+
+export default function D3ChessBoard({ userId, roomId,getboard }) {
+  const [selectedCell, setSelectedCell] = useState(null);
+  const [highlightedSquares, setHighlightedSquares] = useState([]);
+  const [fromSquare, setFromSquare] = useState(null); // store first click
+
   useEffect(() => {
-    console.log("🔌 Connecting to chess board...");
-
-    // Listen for updated board from server
-    socket.on('board', ({ board: newBoard }) => {
-      console.log("♟️ Board received from server:", newBoard);
-      setBoard(newBoard);
-      setLoading(false);
+    // Receive highlighted moves from server
+    socket.on('chess_pieces_position', (data) => {
+      setHighlightedSquares(data || []);
     });
 
-    // Listen for server updates after a move
-    socket.on('chess_pieces_position', (updatedBoard) => {
-      console.log("♟️ Updated board after move:", updatedBoard);
-      setBoard(updatedBoard);
+    // Receive updated board after a move
+    socket.on('board', ({ board, playerColor }) => {
+      console.log('♟ Board updated:', board, 'Next turn:', playerColor);
     });
-
-    // Initial join
-    socket.emit('joinRoom', { userId, roomId });
-
-    // Request initial board
-    socket.emit('getBoard', { roomId });
 
     return () => {
-      socket.off('board');
       socket.off('chess_pieces_position');
+      socket.off('board');
     };
-  }, [userId, roomId]);
+  }, []);
 
-  const handleCellPress = (row, col) => {
-    const pos = `${String.fromCharCode(97 + col)}${8 - row}`; // e.g., a8, h1
-    if (!from) {
-      setFrom(pos);
-    } else if (!to) {
-      setTo(pos);
+  const handleSquareClick = (row, col) => {
+    const coord = indexToCoord(row, col);
+    setSelectedCell({ row, col });
 
-      // Emit move when both from and to are selected
-      const moveData = { from: from, to: pos, roomId };
-      console.log("📤 Sending move:", moveData);
-      socket.emit('chess_pieces_position', moveData);
+    // If no "from" selected yet, select piece and request possible moves
+    if (!fromSquare) {
+      const piece = getboard[row][col];
+      if (piece) {
+        const color = piece === piece.toLowerCase() ? 'black' : 'white';
+        setFromSquare(coord);
 
-      // Reset for next move
-      setFrom(null);
-      setTo(null);
+        // Ask server for possible moves (optional)
+        socket.emit('chess_pieces_position', { from: coord, color }, (res) => {
+          console.log('📥 Move highlights response:', res);
+        });
+      }
+    } else {
+      // Second click: send move to server
+      console.log("roomId",roomId);
+      
+      const moveData = {
+        roomid: '6896cb78b9a0ea39606c05ca',
+        userid: userId,
+        from: fromSquare,
+        to: coord
+      };
+
+      console.log('📤 Sending move:', moveData);
+      socket.emit('chess_game', moveData, (response) => {
+        console.log('📥 Move response from server:', response);
+        if (response.status === 1) {
+          console.log('✅ Move successful, Next turn:', response.nextPlay);
+        } else {
+          console.log('❌ Move failed:', response.message);
+        }
+      });
+
+      // Reset selection
+      setFromSquare(null);
+      setHighlightedSquares([]);
     }
   };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#000" />
-        <Text>Loading chessboard...</Text>
-      </View>
-    );
-  }
+  const renderPiece = (piece) => {
+    if (!piece) return null;
+    const unicodePieces = {
+      p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
+      P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔',
+    };
+    return <Text style={styles.piece}>{unicodePieces[piece]}</Text>;
+  };
 
   return (
-    <View style={styles.container}>
-      {board.map((rowArray, rowIndex) => (
-        <View key={rowIndex} style={styles.row}>
-          {rowArray.map((cell, colIndex) => {
-            const isDark = (rowIndex + colIndex) % 2 === 1;
-            const pos = `${String.fromCharCode(97 + colIndex)}${8 - rowIndex}`;
-            const isSelected = pos === from || pos === to;
-            return (
-              <TouchableOpacity
-                key={colIndex}
-                style={[
-                  styles.cell,
-                  { backgroundColor: isDark ? '#769656' : '#eeeed2' },
-                  isSelected && { backgroundColor: '#f6f669' },
-                ]}
-                onPress={() => handleCellPress(rowIndex, colIndex)}
-              >
-                <Text style={styles.piece}>{cell || ''}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      ))}
+    <View style={styles.board}>
+      {getboard.map((rowData, row) =>
+        rowData.map((cell, col) => {
+          const isLight = (row + col) % 2 === 0;
+          const isSelected = selectedCell?.row === row && selectedCell?.col === col;
+          const isHighlighted = highlightedSquares.some(h => {
+            const { row: hr, col: hc } = coordToIndex(h);
+            return hr === row && hc === col;
+          });
+
+          return (
+            <TouchableOpacity
+              key={`${row}-${col}`}
+              onPress={() => handleSquareClick(row, col)}
+              style={[
+                styles.cell,
+                { backgroundColor: isSelected ? 'yellow' : isLight ? '#f0d9b5' : '#b58863' },
+              ]}
+            >
+              {renderPiece(cell)}
+              {isHighlighted && <View style={styles.greenDot} />}
+            </TouchableOpacity>
+          );
+        })
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  board: {
     width: screenWidth,
-    aspectRatio: 1,
-    borderWidth: 2,
-    borderColor: '#000',
-  },
-  row: {
+    height: screenWidth,
     flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   cell: {
     width: cellSize,
@@ -113,11 +139,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   piece: {
-    fontSize: 24,
+    fontSize: cellSize * 0.6,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  greenDot: {
+    width: cellSize * 0.3,
+    height: cellSize * 0.3,
+    borderRadius: (cellSize * 0.3) / 2,
+    backgroundColor: 'green',
+    position: 'absolute',
   },
 });

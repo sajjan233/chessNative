@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "module": "esnext",
-    "moduleResolution": "node",
+    "module": "node16",              // ✅ changed
+    "moduleResolution": "node16",    // ✅ matches module
     "jsx": "react-native",
     "strict": true,
     "allowSyntheticDefaultImports": true,

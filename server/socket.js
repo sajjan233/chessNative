@@ -18,7 +18,7 @@ export const initializeSocket = (io) => {
 
 
     socket.on('chess_game', async (requestData, callback) => {
-      await chessGamePlay(requestData, socket, io, (response) => {
+      await Chess.chessGamePlay(requestData, socket, io, (response) => {
         console.log("response", response);
         callback(response)
       })

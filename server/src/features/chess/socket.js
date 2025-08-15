@@ -55,48 +55,48 @@ Chess.getVisualBoard = () => {
         ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
         ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
     ];
-    const whiteMap = {
-        'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙'
-    };
-    const blackMap = {
-        'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
-    };
+    // const whiteMap = {
+    //     'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙'
+    // };
+    // const blackMap = {
+    //     'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+    // };
 
 
-    const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-    const visualBoard = [];
+    // const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+    // const visualBoard = [];
 
 
-    for (let row = 0; row < 8; row++) {
-        const rank = 8 - row;
-        const rowArray = [];
-        for (let col = 0; col < 8; col++) {
-            let file = files[col];
-            let cell = board[row][col];
-            let piece = whiteMap[cell] || blackMap[cell] || ' ';
+    // for (let row = 0; row < 8; row++) {
+    //     const rank = 8 - row;
+    //     const rowArray = [];
+    //     for (let col = 0; col < 8; col++) {
+    //         let file = files[col];
+    //         let cell = board[row][col];
+    //         let piece = whiteMap[cell] || blackMap[cell] || ' ';
 
 
-            let position
-            if (whiteMap[cell]) {
-                position = file.toUpperCase() + rank
-            } else if (blackMap[cell]) {
-                position = file.toLowerCase() + rank
-            } else {
-                position = file + rank
-            }
+    //         let position
+    //         if (whiteMap[cell]) {
+    //             position = file.toUpperCase() + rank
+    //         } else if (blackMap[cell]) {
+    //             position = file.toLowerCase() + rank
+    //         } else {
+    //             position = file + rank
+    //         }
 
 
 
 
-            rowArray.push({ [position]: piece });
-        }
+    //         rowArray.push({ [position]: piece });
+    //     }
 
 
-        visualBoard.push(rowArray);
-    }
+    //     visualBoard.push(rowArray);
+    // }
 
 
-    return visualBoard;
+    return board;
 }
 
 
@@ -922,7 +922,7 @@ Chess.chessGamePlay = async (requestData, socket, io, callback) => {
         let roomid = requestData?.roomid
         let playerColor = null;
         response.roomid = roomid
-        const room = await Room.findOne({ _id: ObjectId(roomid) }).populate('currentgamehistory');
+        const room = await Room.findOne({ _id: new ObjectId(roomid) }).populate('currentgamehistory');
         if (!room) {
             return callback({ status: 0, message: 'Room not found' });
         }

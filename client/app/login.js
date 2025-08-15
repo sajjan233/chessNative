@@ -3,6 +3,7 @@ import { View, Text, TextInput, Button, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import axios from 'axios';
+import { BaseURL } from './comman';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -11,7 +12,7 @@ export default function LoginScreen() {
 
   const login = async () => {
     try {
-      const res = await axios.post('http://3.108.254.144:5000/auth/login', {
+      const res = await axios.post(`${BaseURL()}/auth/login`, {
         email,
         password,
       });
