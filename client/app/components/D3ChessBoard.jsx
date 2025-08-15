@@ -21,7 +21,7 @@ const indexToCoord = (row, col) => {
   return files[col] + (8 - row);
 };
 
-export default function D3ChessBoard({ userId, roomId,getboard }) {
+export default function D3ChessBoard({ userId, roomId ,getboard }) {
   const [selectedCell, setSelectedCell] = useState(null);
   const [highlightedSquares, setHighlightedSquares] = useState([]);
   const [fromSquare, setFromSquare] = useState(null); // store first click
@@ -43,6 +43,8 @@ export default function D3ChessBoard({ userId, roomId,getboard }) {
     };
   }, []);
 
+  
+
   const handleSquareClick = (row, col) => {
     const coord = indexToCoord(row, col);
     setSelectedCell({ row, col });
@@ -61,10 +63,9 @@ export default function D3ChessBoard({ userId, roomId,getboard }) {
       }
     } else {
       // Second click: send move to server
-      console.log("roomId",roomId);
       
-      const moveData = {
-        roomid: '6896cb78b9a0ea39606c05ca',
+       moveData = {
+        roomid: roomId,
         userid: userId,
         from: fromSquare,
         to: coord

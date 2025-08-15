@@ -45,16 +45,16 @@ let board = [
     ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 ];
 Chess.getVisualBoard = () => {
-    let board = [
-        ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-        ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-        [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
-        ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-        ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-    ];
+    // let board = [
+    //     ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+    //     ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+    //     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    //     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    //     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    //     [EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY],
+    //     ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+    //     ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
+    // ];
     // const whiteMap = {
     //     'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙'
     // };
@@ -920,9 +920,13 @@ Chess.chessGamePlay = async (requestData, socket, io, callback) => {
     try {
         console.log("requestDatarequestDatarequestDatarequestData", requestData);
         let roomid = requestData?.roomid
+        console.log("roomidroomid",roomid);
+        
         let playerColor = null;
         response.roomid = roomid
-        const room = await Room.findOne({ _id: new ObjectId(roomid) }).populate('currentgamehistory');
+        const room = await Room.findOne({ _id:new ObjectId(roomid) }).populate('currentgamehistory');
+        console.log('room.....', room);
+
         if (!room) {
             return callback({ status: 0, message: 'Room not found' });
         }
@@ -947,7 +951,7 @@ Chess.chessGamePlay = async (requestData, socket, io, callback) => {
         // chess pieces change position / move / play 
         const success = move(from.toLowerCase(), to.toLowerCase(), playerColor);
         if (success) {
-            let newBoard = await getVisualBoard(roomid); // get board / updated board
+            let newBoard = await Chess.getVisualBoard(roomid); // get board / updated board
             nextPlay = (playerColor === 'white') ? 'black' : 'white'; response.nextPlay = nextPlay
             response.status = 1
             // socket.emit('board', { board: newBoard, playerColor: nextPlay }); 
@@ -970,6 +974,8 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
         console.log("reqdaata", reqData);
 
         const user = await User.findById(reqData.id);
+        console.log("useruseruseruseruser", user);
+
         if (!user) {
             response.message = 'User not found';
             return response;
@@ -983,17 +989,17 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
 
         let room = null
 
-        console.log("reqData?.roomid != null && reqData?.roomid != 'undefined' && reqData?.roomid != undefined",reqData?.roomid,reqData?.roomid != null , reqData?.roomid != 'undefined' , reqData?.roomid != undefined);
-        
+        console.log("reqData?.roomid != null && reqData?.roomid != 'undefined' && reqData?.roomid != undefined", reqData?.roomid, reqData?.roomid != null, reqData?.roomid != 'undefined', reqData?.roomid != undefined);
+
         if (reqData?.roomid != null && reqData?.roomid != 'undefined' && reqData?.roomid != undefined) {
-          room = await Room.findOne({ _id: reqData?.roomid });
-           
-            console.log("room",room);
-            
+            room = await Room.findOne({ _id: reqData?.roomid });
+
+            console.log("room", room);
+
         }
-        console.log("roomroomroom11111",room);
-        
-        if(room == null){
+        console.log("roomroomroom11111", room);
+
+        if (room == null) {
 
             let rooms = await Room.find({
                 $expr: { $lte: [{ $size: "$users" }, 2] }
@@ -1001,7 +1007,7 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
 
             for (let singleRoom of rooms) {
                 if (singleRoom.users.length < 2 && singleRoom.users.indexOf(user.id.toString()) == -1) {
-                    
+
                     singleRoom.users.push(user.id)
                     if (!singleRoom.seatings['1']) {
                         singleRoom.seatings['1'] = user.id.toString();
@@ -1011,13 +1017,19 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
                     singleRoom.markModified('seatings');
                     singleRoom.gameStatus = 'in-progress';
                     await singleRoom.save();
-                    
+
                     room = singleRoom
                     break
                 }
             }
+        } else if (room?.users.length == 1) {
+            room.seatings['2'] = user.id.toString();
+            // room.singleRoom.markModified('seatings');
+
+            room.users.push(user.id)
+            room.gameStatus = 'in-progress';
         }
-        console.log("roomroomroom2222",room);
+
 
         if (room == null) {
 
@@ -1065,14 +1077,15 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
 
 
 
-        if (room.users.length === 2 && !room?.currentgamehistory ) {
+        if (room.users.length === 2 && !room?.currentgamehistory) {
             let gameHistory = await GameHistory.create({
                 total_betting: 0,
                 total_winning: 0,
                 jackpot: 0,
             });
             if (gameHistory) {
-                room.currentgamehistory = gameHistory.id; await room.save()
+                room.currentgamehistory = gameHistory.id;
+                 await room.save()
             }
             response.waiting = false;
             response.message = 'Both players connected. Game starting...';

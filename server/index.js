@@ -41,7 +41,11 @@ const { MONGODB_PROD, MONGODB_STAGING, PORT, NODE_ENV } = process.env;
 const mongodbUrl = NODE_ENV === 'Production' ? MONGODB_PROD : MONGODB_STAGING;
 
 mongoose.connect(mongodbUrl, {})
-  .then(() => console.log("✅ Connected to MongoDB"))
+  .then(() => {
+    console.log("✅ Connected to MongoDB")
+
+
+  })
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ✅ Routes

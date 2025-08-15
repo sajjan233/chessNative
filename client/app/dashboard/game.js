@@ -25,24 +25,31 @@ export default function GameScreen() {
           socket.connect();
         }
 
+        let getRoomid = null
         socket.on('connect', async () => {
           console.log('✅ Connected to socket with id:', socket.id);
-          const roomid = await AsyncStorage.getItem('roomid');
-          socket.emit('chessPlayerConnect', { id: userid, roomid: roomid });
+          getRoomid = await AsyncStorage.getItem('roomid');
+          setRoomId(getRoomid);
+
+          socket.emit('chessPlayerConnect', { id: userid, roomid: getRoomid });
         });
 
+        console.log("getRoomid",getRoomid);
+        
         socket.on('roomInfo', async (data) => {
           console.log("📦 roomInfo received:", data);
 
-          let GETroomid = await AsyncStorage.getItem('roomid');
-          if (GETroomid === 'undefined' || GETroomid == null) {
-            GETroomid = data?.roomid;
-            setRoomId(GETroomid);
-            await AsyncStorage.setItem('roomid', GETroomid);
+
+
+
+          if (getRoomid === 'undefined' || getRoomid == null) {
+            getRoomid = data?.roomid;
+            setRoomId(getRoomid);
+            await AsyncStorage.setItem('roomid', getRoomid);
           }
 
           // ✅ Now that we have the room, request the board
-          socket.emit('roomwiseboard', { roomId: GETroomid, userId: userid });
+          socket.emit('roomwiseboard', { roomId: getRoomid, userId: userid });
         });
 
         // ✅ Listen for the board data

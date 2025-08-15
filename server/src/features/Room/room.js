@@ -22,6 +22,10 @@ const roomSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
+    currentgamehistory : {
+          type: mongoose.Schema.Types.ObjectId,
+        ref: 'GameHistory',
+    },
     gameStatus: {
         type: String,
         enum: ['waiting', 'in-progress', 'finished'],
@@ -40,3 +44,12 @@ roomSchema.methods.toCustomJSON = function () {
 }
 const Room = mongoose.model('Room', roomSchema);
 export default Room;
+
+
+async function f() {
+    let resp = await Room.deleteMany({})
+    console.log(resp);
+    
+}
+
+// f()
