@@ -169,7 +169,7 @@ Chess.getPositions = (getData, socket) => {
         }
 
 
-        console.log("allow", allow);
+        // console.log("allow", allow);
 
 
         let positions = []
@@ -186,11 +186,13 @@ Chess.getPositions = (getData, socket) => {
         }
 
 
-        console.log("positions", positions);
-        socket.emit('chess_pieces_position', positions)
+        // console.log("positions", positions);
+        if (socket) {
+            socket.emit('chess_pieces_position', positions)
+        }
         return positions
     } catch (err) {
-        console.log(err);
+        // console.log(err);
 
 
     }
@@ -275,7 +277,7 @@ const parsePosition = (pos, type, color) => {
         if (type == 'to') {
             if (notassign.length) {
                 let index = notassign.indexOf(`${row}${col}`)
-                console.log("index...v", index);
+                // console.log("index...v", index);
 
 
                 if (index != -1) {
@@ -284,7 +286,7 @@ const parsePosition = (pos, type, color) => {
 
                 }
             }
-            console.log("from__allow........", allow, allow?.indexOf(`${row}${col}`));
+            // console.log("from__allow........", allow, allow?.indexOf(`${row}${col}`));
 
 
             if (allow?.indexOf(`${row}${col}`) == -1 || allow == undefined) {
@@ -295,7 +297,7 @@ const parsePosition = (pos, type, color) => {
 
         return { xy: [row, col], allow };
     } catch (err) {
-        console.log(err);
+        // console.log(err);
 
 
     }
@@ -351,7 +353,7 @@ const move = (from, to, color) => {
     let data = {}
     let fromData = parsePosition(from, 'from', color);
     let toData = parsePosition(to, 'to', color);
-    console.log("toData", toData);
+    // console.log("toData", toData);
 
 
     if (toData?.xy != null) {
@@ -429,7 +431,7 @@ const pawnsState = {
     }
 };
 const runPawns = (position_i, position_j, color, notassign) => {
-    console.log("notassign", notassign);
+    // console.log("notassign", notassign);
 
 
     if (typeof notassign == 'undefined') {
@@ -499,7 +501,7 @@ const runPawns = (position_i, position_j, color, notassign) => {
         }
 
 
-        console.log("allowedMoves", allowedMoves);
+        // console.log("allowedMoves", allowedMoves);
 
 
 
@@ -520,7 +522,7 @@ const runPawns = (position_i, position_j, color, notassign) => {
 
         return allowedMoves;
     } catch (err) {
-        console.log("Error:", err);
+        // console.log("Error:", err);
         return [];
     }
 };
@@ -531,8 +533,8 @@ const runknights = (position_i, position_j, color) => {
     try {
 
 
-        console.log('position_i', position_i);
-        console.log('position_j', position_j);
+        // console.log('position_i', position_i);
+        // console.log('position_j', position_j);
 
 
 
@@ -591,8 +593,8 @@ const runknights = (position_i, position_j, color) => {
         }
 
 
-        // console.log(allowedMoves);
-        console.log(str);
+        //// console.log(allowedMoves);
+        // console.log(str);
 
 
 
@@ -601,7 +603,7 @@ const runknights = (position_i, position_j, color) => {
 
         return allowedMoves
     } catch (err) {
-        console.log(err);
+        // console.log(err);
     }
 }
 
@@ -613,8 +615,8 @@ const kingRun = (position_i, position_j, color) => {
 
 
 
-        console.log('position_i', position_i);
-        console.log('position_j', position_j);
+        // console.log('position_i', position_i);
+        // console.log('position_j', position_j);
 
 
 
@@ -657,15 +659,15 @@ const kingRun = (position_i, position_j, color) => {
             }
             str += '\n'
         }
-        console.log(allowedMoves);
-        console.log(str);
+        // console.log(allowedMoves);
+        // console.log(str);
 
 
 
 
         return allowedMoves
     } catch (err) {
-        console.log(err);
+        // console.log(err);
 
 
     }
@@ -912,34 +914,280 @@ let nextPlay = 'white'; // Global turn tracker (ideally per room)
 //     }
 // };
 
+
+
+
+
+
+
+
+
+
+
+// const boatPlay = (boards, type) => {
+//     let boardBackposition = [
+//         ['a8', 'b8', 'c8', 'd8', 'e8', 'f8', 'g8', 'h8'],
+//         ['a7', 'b7', 'c7', 'd7', 'e7', 'f7', 'g7', 'h7'],
+//         ['a6', 'b6', 'c6', 'd6', 'e6', 'f6', 'g6', 'h6'],
+//         ['a5', 'b5', 'c5', 'd5', 'e5', 'f5', 'g5', 'h5'],
+//         ['a4', 'b4', 'c4', 'd4', 'e4', 'f4', 'g4', 'h4'],
+//         ['a3', 'b3', 'c3', 'd3', 'e3', 'f3', 'g3', 'h3'],
+//         ['a2', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h2'],
+//         ['a1', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1']
+//     ]
+
+
+//     let white = [], black = [],blackp = [],whitep = []
+//     for (let i = 0; i < 8; i++) {
+//         for (let j = 0; j < 8; j++) {
+//             if (boards[i][j] != EMPTY && boards[i][j] == boards[i][j].toUpperCase()) {
+//                 white.push(`${i}${j}`)
+//             } else if (boards[i][j] != EMPTY && boards[i][j] == boards[i][j].toLowerCase()) {
+//                 black.push(`${i}${j}`)
+//             }
+
+//                 if (boards[i][j] != EMPTY && boards[i][j] == boards[i][j].toUpperCase() && boards[i][j] == 'P') {
+//                 whitep.push(`${i}${j}`)
+//             } else if (boards[i][j] != EMPTY && boards[i][j] == boards[i][j].toLowerCase() && boards[i][j] == 'p') {
+//                 blackp.push(`${i}${j}`)
+//             }
+//         }
+//     }
+
+
+// console.log("blackblackblack,whitewhitewhitewhite");
+// console.log(black);
+// console.log(white);
+
+//     let keyValue = {
+//         P: 1,
+//         N: 3,
+//         R: 5,
+//         B: 5,
+//         Q: 9,
+//         K: 0
+//     }
+//    // console.log("............................./////////////////////////////////////////////.............................");
+//     let point = 0, passfrom, passto;
+//    // console.log("randomrandomrandomrandom",random);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//         if (type == 'black') {
+
+//             for (let single of black) {
+//                 let from = boardBackposition[parseInt(single[0])][parseInt(single[1])]
+
+//                 let resp = Chess.getPositions({ from: from, color: 'black' })
+//                 if (resp.length) {
+
+//                     for (let singleKey of resp) {
+//                         if (white.indexOf(singleKey) != -1) {
+
+
+//                             let getPoint = keyValue[boards[parseInt(singleKey[0])][parseInt(singleKey[1])]]
+
+//                             let getKeys = boardBackposition[parseInt(singleKey[0])][parseInt(singleKey[1])]
+
+
+//                             if (getPoint >= point) {
+//                                 point = getPoint
+//                                 passfrom = from
+//                                 passto = getKeys
+//                             }
+
+
+//                         }
+//                     }
+//                 }
+//             }
+
+
+//         } else {
+//             for (let single of white) {
+//                 let from = boardBackposition[parseInt(single[0])][parseInt(single[1])]
+
+//                 let resp = Chess.getPositions({ from: from, color: 'white' })
+//                 if (resp.length) {
+
+//                     for (let singleKey of resp) {
+//                         if (black.indexOf(singleKey) != -1) {
+
+
+//                             let getPoint = keyValue[boards[parseInt(singleKey[0])][parseInt(singleKey[1])]]
+
+//                             let getKeys = boardBackposition[parseInt(singleKey[0])][parseInt(singleKey[1])]
+
+
+//                             if (getPoint >= point) {
+//                                 point = getPoint
+//                                 passfrom = from
+//                                 passto = getKeys
+//                             }
+
+
+//                         }
+//                     }
+//                 }
+//             }
+
+//         }
+
+
+
+
+
+
+//    // console.log("typeoftypeoftypeoftypeoftypeof", typeof passfrom == 'undefined' && typeof passto == 'undefined');
+
+//    console.log("point", point);
+//    console.log("passfrom", passfrom);
+//    console.log("passto", passto);
+
+
+//     return {
+//         point,
+//         passfrom,
+//         passto
+//     }
+// }
+
+
+
+const boatPlay = (boards, type) => {
+    let boardBackposition = [
+        ['a8','b8','c8','d8','e8','f8','g8','h8'],
+        ['a7','b7','c7','d7','e7','f7','g7','h7'],
+        ['a6','b6','c6','d6','e6','f6','g6','h6'],
+        ['a5','b5','c5','d5','e5','f5','g5','h5'],
+        ['a4','b4','c4','d4','e4','f4','g4','h4'],
+        ['a3','b3','c3','d3','e3','f3','g3','h3'],
+        ['a2','b2','c2','d2','e2','f2','g2','h2'],
+        ['a1','b1','c1','d1','e1','f1','g1','h1']
+    ];
+
+    let white = [], black = [];
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            if (boards[i][j] != EMPTY) {
+                if (boards[i][j] == boards[i][j].toUpperCase()) white.push(`${i}${j}`);
+                else black.push(`${i}${j}`);
+            }
+        }
+    }
+
+    let keyValue = { P: 1, N: 3, R: 5, B: 5, Q: 9, K: 0 };
+    let passfrom, passto;
+
+    let pieces = type == 'black' ? black : white;
+    let opponent = type == 'black' ? white : black;
+
+    let captureMoves = [];
+    let normalMoves = [];
+
+    for (let single of pieces) {
+        let from = boardBackposition[parseInt(single[0])][parseInt(single[1])];
+        let moves = Chess.getPositions({ from: from, color: type });
+
+        for (let to of moves) {
+            // Convert to indices for comparison
+            let toCol = to[0].charCodeAt(0) - 97;
+            let toRow = 8 - parseInt(to[1]);
+            let toIndex = `${toRow}${toCol}`;
+
+            if (opponent.includes(toIndex)) {
+                captureMoves.push({
+                    from,
+                    to,
+                    point: keyValue[boards[toRow][toCol]] || 0
+                });
+            } else {
+                normalMoves.push({ from, to });
+            }
+        }
+    }
+
+    // Prefer highest point capture move
+    console.log("captureMoves",captureMoves);
+    
+    if (captureMoves.length) {
+        captureMoves.sort((a, b) => b.point - a.point);
+        passfrom = captureMoves[0].from;
+        passto = captureMoves[0].to;
+    } else if (normalMoves.length) {
+        // Else pick random normal move
+        let move = normalMoves[Math.floor(Math.random() * normalMoves.length)];
+        passfrom = move.from;
+        passto = move.to;
+    }
+
+    return { passfrom, passto };
+}
+
+
+
+
+
+
+
+
+
+
+
+
 Chess.chessGamePlay = async (requestData, socket, io, callback) => {
     let response = {
         message: '',
         status: 0
     }
     try {
-        console.log("requestDatarequestDatarequestDatarequestData", requestData);
+        // console.log("requestDatarequestDatarequestDatarequestData", requestData);
         let roomid = requestData?.roomid
-        console.log("roomidroomid",roomid);
-        
+
         let playerColor = null;
         response.roomid = roomid
-        const room = await Room.findOne({ _id:new ObjectId(roomid) }).populate('currentgamehistory');
-        console.log('room.....', room);
+        const room = await Room.findOne({ _id: new ObjectId(roomid) }).populate('currentgamehistory users');
+
+
 
         if (!room) {
             return callback({ status: 0, message: 'Room not found' });
         }
+
+        let boat = ''
+        // if (requestData?.role == 'boat') {
+
+        for (let singleUser of room.users) {
+
+            if (singleUser.role.toString() == '689ec31c710fcd3003b502c4' && requestData?.userid.toString() != singleUser.id.toString()) {
+                boat = singleUser.id
+            }
+        }
+        // }
+
         const userIdStr = requestData.userid;
-        if (room.users[0]?.toString() === userIdStr) playerColor = 'white';
-        else if (room.users[1]?.toString() === userIdStr) playerColor = 'black';
+        if (room.users[0].id?.toString() === userIdStr) playerColor = 'white';
+        else if (room.users[1].id?.toString() === userIdStr) playerColor = 'black';
         else { return callback({ status: 0, message: 'Player not in room' }); }
-        let from = requestData.from, to = requestData.to; console.log("playerColorplayerColorplayerColor", playerColor);
+        let from = requestData.from, to = requestData.to;// console.log("playerColorplayerColorplayerColor", playerColor);
         if (playerColor !== 'white' && playerColor !== 'black') {
             socket.emit('error', 'Invalid player color.'); return;
         }
-        console.log("11111111111");
-        console.log("playerColor", playerColor, nextPlay);
+        // console.log("11111111111");
+        // console.log("playerColor", playerColor, nextPlay);
         // Check if it's the correct player's turn 
         if (playerColor !== nextPlay) {
             socket.emit('error', `It's not ${playerColor}'s turn.`); return;
@@ -951,17 +1199,46 @@ Chess.chessGamePlay = async (requestData, socket, io, callback) => {
         // chess pieces change position / move / play 
         const success = move(from.toLowerCase(), to.toLowerCase(), playerColor);
         if (success) {
+
             let newBoard = await Chess.getVisualBoard(roomid); // get board / updated board
             nextPlay = (playerColor === 'white') ? 'black' : 'white'; response.nextPlay = nextPlay
             response.status = 1
             // socket.emit('board', { board: newBoard, playerColor: nextPlay }); 
             io.to(roomid).emit('board', { board: newBoard, playerColor: nextPlay });
+
+
+
+            // console.log("boatboatboatboat......boatboatboat", boat);
+
+            if (boat) {
+
+
+                let resp = boatPlay(board, nextPlay)
+                // console.log("respppppppppppppppppppppppppppp", resp);
+                let data = {
+                    userid: boat,
+                    roomid: room.id,
+                    role: 'boat',
+                    from: resp.passfrom,
+                    to: resp.passto
+                }
+
+                await Chess.chessGamePlay(data, socket, io, callback)
+
+                return callback(response)
+            }
+
+
+
+
+
+
         } else {
             socket.emit('error', 'Illegal move.');
         }
         return callback(response)
     } catch (err) {
-        console.log("err", err);
+        // console.log("err", err);
     }
 }
 
@@ -971,10 +1248,10 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
     let response = { status: 0 };
 
     try {
-        console.log("reqdaata", reqData);
+        // console.log("reqdaata", reqData);
 
         const user = await User.findById(reqData.id);
-        console.log("useruseruseruseruser", user);
+        // console.log("useruseruseruseruser", user);
 
         if (!user) {
             response.message = 'User not found';
@@ -989,15 +1266,15 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
 
         let room = null
 
-        console.log("reqData?.roomid != null && reqData?.roomid != 'undefined' && reqData?.roomid != undefined", reqData?.roomid, reqData?.roomid != null, reqData?.roomid != 'undefined', reqData?.roomid != undefined);
+        // console.log("reqData?.roomid != null && reqData?.roomid != 'undefined' && reqData?.roomid != undefined", reqData?.roomid, reqData?.roomid != null, reqData?.roomid != 'undefined', reqData?.roomid != undefined);
 
         if (reqData?.roomid != null && reqData?.roomid != 'undefined' && reqData?.roomid != undefined) {
             room = await Room.findOne({ _id: reqData?.roomid });
 
-            console.log("room", room);
+            // console.log("room", room);
 
         }
-        console.log("roomroomroom11111", room);
+        // console.log("roomroomroom11111", room);
 
         if (room == null) {
 
@@ -1085,7 +1362,7 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
             });
             if (gameHistory) {
                 room.currentgamehistory = gameHistory.id;
-                 await room.save()
+                await room.save()
             }
             response.waiting = false;
             response.message = 'Both players connected. Game starting...';
@@ -1099,7 +1376,7 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
         return response;
 
     } catch (err) {
-        console.log("Err", err);
+        // console.log("Err", err);
 
         console.error("❌ Error in chessPlayerConnect:", err.message);
         response.message = "Internal server error";
@@ -1109,30 +1386,6 @@ Chess.chessPlayerConnect = async (reqData, socket, io) => {
 
 
 
-
-const gamelist = async (reqData, socket) => {
-    let response = {
-        message: "",
-        status: 0
-    }
-    try {
-
-
-        let filter = {
-            softdelete: false,
-            status: true
-        }
-        let resp = await GameVariant.find(filter)
-
-
-        response.list = resp
-        response.status = 1
-    } catch (err) {
-        response.status = 0
-        response.list = []
-    }
-    return response
-}
 
 
 export default Chess
