@@ -6,7 +6,9 @@ const game_id = '688f6801df83a7dcda18f4eb'
 const ObjectId = mongoose.Types.ObjectId;
 const Chess = {}
 const EMPTY = ' ';
-
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 // function getBoard() {
 
@@ -1301,7 +1303,8 @@ Chess.chessGamePlay = async (requestData, socket, io, callback) => {
                     from: resp.passfrom,
                     to: resp.passto
                 }
-
+                
+                await sleep(3000)
                 await Chess.chessGamePlay(data, socket, io, callback)
 
                 return callback(response)
