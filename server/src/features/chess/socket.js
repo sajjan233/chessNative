@@ -33,7 +33,16 @@ const EMPTY = ' ';
 
 
 // let board = getBoard()
-
+let boardBackposition = [
+    ['a8', 'b8', 'c8', 'd8', 'e8', 'f8', 'g8', 'h8'],
+    ['a7', 'b7', 'c7', 'd7', 'e7', 'f7', 'g7', 'h7'],
+    ['a6', 'b6', 'c6', 'd6', 'e6', 'f6', 'g6', 'h6'],
+    ['a5', 'b5', 'c5', 'd5', 'e5', 'f5', 'g5', 'h5'],
+    ['a4', 'b4', 'c4', 'd4', 'e4', 'f4', 'g4', 'h4'],
+    ['a3', 'b3', 'c3', 'd3', 'e3', 'f3', 'g3', 'h3'],
+    ['a2', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h2'],
+    ['a1', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1']
+];
 let board = [
     ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
     ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
@@ -190,7 +199,7 @@ Chess.getPositions = (getData, socket) => {
         if (socket) {
             socket.emit('chess_pieces_position', positions)
         }
-        return positions
+        return { positions, allow }
     } catch (err) {
         // console.log(err);
 
@@ -1068,16 +1077,7 @@ let nextPlay = 'white'; // Global turn tracker (ideally per room)
 
 
 const boatPlay = (boards, type) => {
-    let boardBackposition = [
-        ['a8','b8','c8','d8','e8','f8','g8','h8'],
-        ['a7','b7','c7','d7','e7','f7','g7','h7'],
-        ['a6','b6','c6','d6','e6','f6','g6','h6'],
-        ['a5','b5','c5','d5','e5','f5','g5','h5'],
-        ['a4','b4','c4','d4','e4','f4','g4','h4'],
-        ['a3','b3','c3','d3','e3','f3','g3','h3'],
-        ['a2','b2','c2','d2','e2','f2','g2','h2'],
-        ['a1','b1','c1','d1','e1','f1','g1','h1']
-    ];
+
 
     let white = [], black = [];
     for (let i = 0; i < 8; i++) {
@@ -1102,7 +1102,7 @@ const boatPlay = (boards, type) => {
         let from = boardBackposition[parseInt(single[0])][parseInt(single[1])];
         let moves = Chess.getPositions({ from: from, color: type });
 
-        for (let to of moves) {
+        for (let to of moves?.positions) {
             // Convert to indices for comparison
             let toCol = to[0].charCodeAt(0) - 97;
             let toRow = 8 - parseInt(to[1]);
@@ -1121,8 +1121,8 @@ const boatPlay = (boards, type) => {
     }
 
     // Prefer highest point capture move
-    console.log("captureMoves",captureMoves);
-    
+    console.log("captureMoves", captureMoves);
+
     if (captureMoves.length) {
         captureMoves.sort((a, b) => b.point - a.point);
         passfrom = captureMoves[0].from;
@@ -1139,8 +1139,84 @@ const boatPlay = (boards, type) => {
 
 
 
+const kingBlock = async (color, updatedBoard) => {
+    try {
+        let isCheck = false;
+        let isCheckmate = false;
+        let kingPosition = null;
 
+        // Step 1: Find your king
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const piece = updatedBoard[i][j];
+                if (piece === EMPTY) continue;
 
+                if ((color === "white" && piece === "K") ||
+                    (color === "black" && piece === "k")) {
+                    kingPosition = boardBackposition[i][j];
+                }
+            }
+        }
+
+        // Step 2: Check if enemy pieces attack your king
+        let attackers = [];
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const piece = updatedBoard[i][j];
+                if (piece === EMPTY) continue;
+
+                let isEnemy = (color === "white") ? (piece === piece.toLowerCase()) : (piece === piece.toUpperCase());
+                if (!isEnemy) continue;
+
+                let moves = await Chess.getPositions({ from: boardBackposition[i][j], color: (color === "white" ? "black" : "white"), board: updatedBoard });
+
+                if (moves.allow?.includes(kingPosition)) {
+                    attackers.push({ piece, from: boardBackposition[i][j] });
+                    isCheck = true;
+                }
+            }
+        }
+
+        // Step 3: If check, test if king has escape
+        if (isCheck) {
+            let kingMoves = await Chess.getPositions({ from: kingPosition, color, board: updatedBoard });
+
+            // Filter out moves attacked by enemy
+            let safeMoves = [];
+            for (let move of kingMoves.allow) {
+                let underAttack = false;
+
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
+                        const piece = updatedBoard[i][j];
+                        if (piece === EMPTY) continue;
+
+                        let isEnemy = (color === "white") ? (piece === piece.toLowerCase()) : (piece === piece.toUpperCase());
+                        if (!isEnemy) continue;
+
+                        let moves = await Chess.getPositions({ from: boardBackposition[i][j], color: (color === "white" ? "black" : "white"), board: updatedBoard });
+                        if (moves.allow.includes(move)) {
+                            underAttack = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!underAttack) safeMoves.push(move);
+            }
+
+            if (safeMoves.length === 0) {
+                isCheckmate = true;
+            }
+        }
+
+        return { check: isCheck, checkmate: isCheckmate, kingPosition, attackers };
+
+    } catch (err) {
+        console.error("Error in kingBlock:", err);
+        return { check: false, checkmate: false };
+    }
+};
 
 
 
@@ -1207,8 +1283,11 @@ Chess.chessGamePlay = async (requestData, socket, io, callback) => {
             io.to(roomid).emit('board', { board: newBoard, playerColor: nextPlay });
 
 
+            let resp = await kingBlock(nextPlay, newBoard);
 
-            // console.log("boatboatboatboat......boatboatboat", boat);
+            // FIX 2: Socket event नाम sync
+            io.to(roomid).emit("incheckOrCheckmat", { color: nextPlay, ...resp });
+
 
             if (boat) {
 

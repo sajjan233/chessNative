@@ -53,8 +53,9 @@ async function joinOrCreateRoomWithUser(socket, io) {
 
 
 
-const schedulers = (io,socket) => {
+const schedulers = async (io,socket) => {
 
+console.log("run");
 
 
     schedulers.job = scheduleJob('*/30 * * * * *', async function () {
@@ -63,12 +64,12 @@ const schedulers = (io,socket) => {
 
     });
 
-
-
-
-
-
 }
+
+
+
+
+
 
 
 export default schedulers

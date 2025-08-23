@@ -7,8 +7,8 @@ const screenWidth = Dimensions.get('window').width;
 const cellSize = screenWidth / 8;
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
-// Convert chess notation like "f6" to row/col indexes
 const coordToIndex = (coord) => {
+  if (!coord) return { row: -1, col: -1 };
   const file = coord[0];
   const rank = coord[1];
   const col = file.charCodeAt(0) - 'a'.charCodeAt(0);
@@ -16,79 +16,86 @@ const coordToIndex = (coord) => {
   return { row, col };
 };
 
-// Convert row/col to chess notation like e2
-const indexToCoord = (row, col) => {
-  return files[col] + (8 - row);
-};
+const indexToCoord = (row, col) => files[col] + (8 - row);
 
-export default function D3ChessBoard({ userId, roomId ,getboard }) {
+const defaultBoard = [
+  ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
+  ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
+  ['', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', ''],
+  ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
+  ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'],
+];
+
+export default function D3ChessBoard({ userId, roomId, getboard }) {
+  const [board, setBoard] = useState(getboard && getboard.length ? getboard : defaultBoard);
   const [selectedCell, setSelectedCell] = useState(null);
   const [highlightedSquares, setHighlightedSquares] = useState([]);
-  const [fromSquare, setFromSquare] = useState(null); // store first click
+  const [fromSquare, setFromSquare] = useState(null);
+  const [kingInCheckSquare, setKingInCheckSquare] = useState(null);
+  const [statusMsg, setStatusMsg] = useState('');
+  const [isCheck, setIsCheck] = useState(false);
 
   useEffect(() => {
-    // Receive highlighted moves from server
-    socket.on('chess_pieces_position', (data) => {
-      setHighlightedSquares(data || []);
+    socket.on('chess_pieces_position', (moves) => {
+      setHighlightedSquares(moves || []);
     });
 
-    // Receive updated board after a move
-    socket.on('board', ({ board, playerColor }) => {
-      console.log('♟ Board updated:', board, 'Next turn:', playerColor);
+    socket.on('board', ({ board }) => {
+      setBoard(board && board.length ? board : defaultBoard);
+      setFromSquare(null);
+      setHighlightedSquares([]);
+    });
+
+    socket.on('incheckOrCheckmat', (resp) => {
+      if (resp.checkmate) {
+        setStatusMsg(`${resp.color} is in Checkmate!`);
+        setKingInCheckSquare(resp.kingPosition);
+        setIsCheck(false);
+      } else if (resp.check) {
+        setStatusMsg(`${resp.color} is in Check!`);
+        setKingInCheckSquare(resp.kingPosition);
+        setIsCheck(true);
+      } else {
+        setStatusMsg('');
+        setKingInCheckSquare(null);
+        setIsCheck(false);
+      }
     });
 
     return () => {
       socket.off('chess_pieces_position');
       socket.off('board');
+      socket.off('incheckOrCheckmat');
     };
   }, []);
-
-  
 
   const handleSquareClick = (row, col) => {
     const coord = indexToCoord(row, col);
     setSelectedCell({ row, col });
 
-    // If no "from" selected yet, select piece and request possible moves
     if (!fromSquare) {
-      const piece = getboard[row][col];
+      const piece = board[row][col];
       if (piece) {
         const color = piece === piece.toLowerCase() ? 'black' : 'white';
         setFromSquare(coord);
-
-        // Ask server for possible moves (optional)
-        socket.emit('chess_pieces_position', { from: coord, color }, (res) => {
-          console.log('📥 Move highlights response:', res);
-        });
+        socket.emit('chess_pieces_position', { from: coord, color });
       }
     } else {
-      // Second click: send move to server
-      
-       moveData = {
-        roomid: roomId,
-        userid: userId,
-        from: fromSquare,
-        to: coord
-      };
-
-      console.log('📤 Sending move:', moveData);
+      const moveData = { roomid: roomId, userid: userId, from: fromSquare, to: coord };
       socket.emit('chess_game', moveData, (response) => {
-        console.log('📥 Move response from server:', response);
-        if (response.status === 1) {
-          console.log('✅ Move successful, Next turn:', response.nextPlay);
-        } else {
-          console.log('❌ Move failed:', response.message);
-        }
+        if (response.status !== 1) setStatusMsg(`❌ ${response.message}`);
       });
 
-      // Reset selection
       setFromSquare(null);
       setHighlightedSquares([]);
     }
   };
 
   const renderPiece = (piece) => {
-    if (!piece) return null;
+    if (!piece || piece === ' ') return null;
     const unicodePieces = {
       p: '♟', r: '♜', n: '♞', b: '♝', q: '♛', k: '♚',
       P: '♙', R: '♖', N: '♘', B: '♗', Q: '♕', K: '♔',
@@ -97,31 +104,51 @@ export default function D3ChessBoard({ userId, roomId ,getboard }) {
   };
 
   return (
-    <View style={styles.board}>
-      {getboard.map((rowData, row) =>
-        rowData.map((cell, col) => {
-          const isLight = (row + col) % 2 === 0;
-          const isSelected = selectedCell?.row === row && selectedCell?.col === col;
-          const isHighlighted = highlightedSquares.some(h => {
-            const { row: hr, col: hc } = coordToIndex(h);
-            return hr === row && hc === col;
-          });
+    <View>
+      <View style={styles.board}>
+        {board.map((rowData, row) =>
+          rowData.map((cell, col) => {
+            const isLight = (row + col) % 2 === 0;
+            const isSelected = selectedCell?.row === row && selectedCell?.col === col;
 
-          return (
-            <TouchableOpacity
-              key={`${row}-${col}`}
-              onPress={() => handleSquareClick(row, col)}
-              style={[
-                styles.cell,
-                { backgroundColor: isSelected ? 'yellow' : isLight ? '#f0d9b5' : '#b58863' },
-              ]}
-            >
-              {renderPiece(cell)}
-              {isHighlighted && <View style={styles.greenDot} />}
-            </TouchableOpacity>
-          );
-        })
-      )}
+            const isHighlighted = highlightedSquares.some(h => {
+              const { row: hr, col: hc } = coordToIndex(h);
+              return hr === row && hc === col;
+            });
+
+            const isKingInCheck = kingInCheckSquare === indexToCoord(row, col);
+
+            // Disable clicks on non-highlighted cells if in check
+            const disabled = isCheck && !isHighlighted && !isKingInCheck;
+
+            return (
+              <TouchableOpacity
+                key={`${row}-${col}`}
+                onPress={() => !disabled && handleSquareClick(row, col)}
+                style={[
+                  styles.cell,
+                  {
+                    backgroundColor: isKingInCheck
+                      ? '#ff4d4d'
+                      : isSelected
+                        ? '#ffe066'
+                        : isLight
+                          ? '#f0d9b5'
+                          : '#b58863',
+                    opacity: disabled ? 0.5 : 1,
+                  },
+                ]}
+                disabled={disabled}
+              >
+                {renderPiece(cell)}
+                {isHighlighted && <View style={styles.greenDot} />}
+              </TouchableOpacity>
+            );
+          })
+        )}
+      </View>
+
+      {statusMsg ? <Text style={styles.statusText}>{statusMsg}</Text> : null}
     </View>
   );
 }
@@ -143,10 +170,17 @@ const styles = StyleSheet.create({
     fontSize: cellSize * 0.6,
   },
   greenDot: {
-    width: cellSize * 0.3,
-    height: cellSize * 0.3,
-    borderRadius: (cellSize * 0.3) / 2,
+    width: cellSize * 0.25,
+    height: cellSize * 0.25,
+    borderRadius: (cellSize * 0.25) / 2,
     backgroundColor: 'green',
     position: 'absolute',
+  },
+  statusText: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: 'red',
   },
 });
